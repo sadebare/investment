@@ -56,7 +56,7 @@ EKS across two AZs. Managed node groups span both zones, and the order-service p
 
 The API uses a Horizontal Pod Autoscaler driven by CPU and request rate. Workers scale on SQS queue depth via KEDA — queue depth is the better signal for a backing-up pipeline because CPU lags behind it. Cluster Autoscaler / Karpenter handles node-level capacity underneath.
 
-Fargate is the simpler default for a single service and carries lower operational overhead than EKS on EC2. EKS is the right choice here for two environment-specific reasons. First, the platform already runs a fleet of services, and shared orchestration with consistent deploy, scaling, and policy tooling outweighs per-service simplicity past a handful of services. Second, the observability stack relies on node-level agents — Prometheus node-exporter, a log collector, and the OTel collector — running as DaemonSets, which Fargate does not support. Fargate would force per-pod sidecars and complicate the exact part of the system this service depends on. EKS on EC2 nodes keeps that clean. If the platform team later standardizes bursty or batch workloads on Fargate profiles, the same manifests still apply.
+Fargate is the simpler default for a single service and carries lower operational overhead than EKS on EC2. EKS is the right choice here for two environment specific reasons. First, the platform already runs a fleet of services, and shared orchestration with consistent deploy, scaling, and policy tooling outweighs per service simplicity past a handful of services. Second, the observability stack relies on node-level agents: Prometheus node-exporter, a log collector, and the OTel collector running as DaemonSets, which Fargate does not support. Fargate would force per pod sidecars and complicate the exact part of the system this service depends on. EKS on EC2 nodes keeps that clean. If the platform team later standardizes bursty or batch workloads on Fargate profiles, the same manifests still apply.
 
 ## Database
 
@@ -64,7 +64,7 @@ Aurora PostgreSQL, Multi-AZ, one writer and one reader. Aurora's failover is fas
 
 Two design decisions matter more than the infrastructure choice:
 
-1. **Idempotency keys.** Every order carries a client-supplied key with a unique constraint in the DB, so a client retry cannot double-execute.
+1. **Idempotency keys.** Every order carries a client supplied key with a unique constraint in the DB, so a client retry cannot double-execute.
 2. **Outbox pattern.** The state change and the queue-publish event are written in the same DB transaction. A separate process reads the outbox and publishes to SQS, eliminating the case where an order is committed but lost before a worker picks it up.
 
 RDS Proxy sits in front of the writer to keep connection counts manageable during spikes.
@@ -167,11 +167,5 @@ Correctness is its own SLO because investment orders are not latency-first. A cu
 
 **Error budget policy.** If the availability budget burns more than 50% in a week, deploys are throttled and the focus shifts to reliability. A correctness breach of any size is a P0 with a full postmortem and a fix before anything else.
 
-## Open questions
-
-- Regulatory retention period — to confirm with compliance.
-- Which broker and what their SLA is, since our SLO is bounded by theirs.
-- Cost ceiling for cross-region plus the observability backends at scale.
-- Whether to add a kill switch to pause order acceptance during incidents. Leaning yes.
 - Whether we are in PCI scope or the broker owns the card side. It moves the security boundary significantly.
 - Where New Relic ends and the Grafana stack begins, to avoid paying twice for the same signal.
