@@ -1,9 +1,5 @@
 # Investment Order Service — Deployment Architecture & SLOs
 
-SRE take-home. The service handles all investment orders end to end: accepting them, validating, routing to the broker, and recording the result. It moves customer money, so the design priorities are correctness, durability, and security, in roughly that order. Latency matters but comes after those.
-
-I've assumed Cowrywise's environment: AWS primary, some GCP, customer base in the millions, regulated fintech. The observability section is the most detailed part because that's what the role is asking for.
-
 ## Architecture
 
 ```mermaid
